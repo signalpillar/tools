@@ -62,7 +62,7 @@ def main():
         if not "," in line:
             continue
         # create a new object and stuff it in the top container
-        top.entities.append(Entity(line.split(',')[1].strip(), line.split(',')[0].strip()))
+        top.entities.append(Entity(line.split(',')[1].strip().replace("'","").replace('"',""), line.split(',')[0].strip()))
 
     # output will go to a text file or to stdout if no file is specified
     if options.outputfile != None:
