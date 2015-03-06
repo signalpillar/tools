@@ -75,7 +75,18 @@ def EntityExport(ipaddr, entity):
         r = s.get('https://{0}/api/entitymgmt/entities?filter={1}&filterKeys=DisplayLabel%2CTags&filterValues={1}&type={2}&page=1&start=0&limit=500000'.format(ipaddr, entity, entitytype), verify=False)
         if r.status_code == 200 and r.json()['status'] == "OK":
             for e in r.json()['result']['data']:
-                entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['BeginTime'], e['Id']))
+                if e['Type'] == 'Application':
+                    itls = []
+                    r2 = s.get('https://{0}/api/entitymgmt/app/{1}/itls?filterKeys=initiatorLabel&filterKeys=targetLabel&page=1&start=0&limit=500000'.format(ipaddr, e['Id']), verify=False)
+                    if r2.status_code == 200 and r2.json()['status'] == "OK":
+                        for i in r2.json()['result']['data']:
+                            init = i['initiatorLabel'] if i['initiatorLabel'] != '' else 'All' 
+                            targ = i['targetLabel'] if i['targetLabel'] != '' else 'All'
+                            lun = i['lun'] if i['lun'] != -1 else 'All' 
+                            itls.append((init, targ, lun))
+                    entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['BeginTime'], e['Id'], itls))
+                else:
+                    entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['BeginTime'], e['Id']))
 
     return entitylist
     #except:
@@ -100,12 +111,6 @@ def GetProperties(ipaddr, entityid):
     if r.status_code == 200 and r.json()['status'] == "OK":
         return r.json()['result']
 
-# itls associated with an application
-# https://172.16.218.131/api/entitymgmt/app/87178f0b62a94056b14a8971850b8fb4/itls?
-#     _dc=1424529745961&filterKeys=initiatorLabel&filterKeys=targetLabel&page=1&start=0&limit=10000
-#
-# {"status":"OK","result":{"totalCount":4,"data":[{"id":"7dbe03875ad84bd8a7c4aa6dfb4616b8","editType":null,"initiatorId":"b4997cd3e39c475f86b1285af37a61e4","initiatorLabel":"SVCS_UCS12","initiatorWWN":"","initiatorFCID":"","targetId":"-1","targetLabel":"","targetWWN":"","targetFCID":"","lun":-1},{"id":"772975e25e1e40399ec5e6154ab3d459","editType":null,"initiatorId":"28d376ddbf834f9d901f2dfe94c001af","initiatorLabel":"SVCS_UCS14","initiatorWWN":"","initiatorFCID":"","targetId":"-1","targetLabel":"","targetWWN":"","targetFCID":"","lun":-1},{"id":"5747154ed76e4746b544117599d45d18","editType":null,"initiatorId":"78c538cd2bd043109e79e6301ab7a13f","initiatorLabel":"SVCS_UCS13","initiatorWWN":"","initiatorFCID":"","targetId":"-1","targetLabel":"","targetWWN":"","targetFCID":"","lun":-1},{"id":"6af506b8c73f45e2b3c9f74946c7f238","editType":null,"initiatorId":"990e2a55169141249a055100fc4c2b91","initiatorLabel":"SVCS_UCS11","initiatorWWN":"","initiatorFCID":"","targetId":"-1","targetLabel":"","targetWWN":"","targetFCID":"","lun":-1}]}}
-
 def main():
     options = ParseCmdLineParameters()
 
@@ -120,7 +125,7 @@ def main():
         entities = EntityExport(options.host, options.entity)
     else:
         entities = EntityTypeExport(options.host, options.entitytype)
-
+    
     if options.entity != None:
         if options.exactonly:
             print("\nExact Matches:")
