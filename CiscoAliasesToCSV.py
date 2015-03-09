@@ -3,7 +3,7 @@
 __author__ = 'nick.york'
 __license__ = 'https://www.apache.org/licenses/LICENSE-2.0'
 __copyright__ = 'Copyright (c) 2015 Virtual Instruments Corporation. All rights reserved.'
-__date__ = '2015-02-24'
+__date__ = '2015-03-09'
 __version__ = '1.0'
 
 # parses the output of the following Cisco commands to build aliases
