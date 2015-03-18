@@ -26,6 +26,7 @@ def ParseCmdLineParameters():
     opts.add_option("-z", "--password-file", action="store", type="string", dest="passwordfile")
     opts.add_option("-f", "--file", action="store", type="string", dest="filename")
     opts.add_option("-i", "--stdin", action="store_true", dest="stdin", default=False)
+    opts.add_option("-F", "--force", action="store_true", dest="force", default=False)
     opt, argv = opts.parse_args()
 
     if opt.host == None or opt.username == None or (opt.password == None and opt.passwordfile == None) or (opt.filename == None and not opt.stdin):
@@ -86,7 +87,7 @@ def VirtualWisdomLogin(ipaddr, login, password):
         PrintHelpAndExit("Exception caught in the VirtualWisdom login process.")
 
 # uploads entity import file, checks validation and commits changes if validation successful
-def UploadEntityImport(ipaddr, fh=None, str=None):
+def UploadEntityImport(ipaddr, fh=None, str=None, force=False):
     #try:
     # undocumented and unsupported apis, subject to change in every release
     if fh is not None:
@@ -107,8 +108,23 @@ def UploadEntityImport(ipaddr, fh=None, str=None):
                 print("Entity: {0} [{1}]".format(entity['name'], entity['type']))
                 print("Location: Line: {0} Column: {1}".format(entity['marker']['location']['line'], entity['marker']['location']['column']))
             except:
+                pass
+
+        if not force:
+            print("\n\nValidation failure.  To attempt to import anyway run again with --force\n")
+            exit()
+        else:
+            transactionid = r.json()['result']['transactionId']
+            commitpayload = {"transactionId":transactionid,"async":"true"}
+            # undocumented and unsupported apis, subject to change in every release
+            r = s.put('https://{0}/api/config/entity/import/commit'.format(ipaddr), verify=False, data=json.dumps(commitpayload), headers=jsonheaders)
+            if r.status_code == 200 and r.json()['status'] == "OK":
+                return True
+            else:
+                print(r.status_code)
+                print(r.json()['status'])
+                print("Force failed.")
                 exit()
-        exit()
     #except:
     #    PrintHelpAndExit("Exception caught during Entity Import.")
 
@@ -131,9 +147,9 @@ def main():
 
     # if the user specified an entity file, use it otherwise read from standard input
     if options.filename != None:
-        UploadEntityImport(options.host, fh=open(options.filename, 'r'))
+        UploadEntityImport(options.host, fh=open(options.filename, 'r'), force=options.force)
     else:
-        UploadEntityImport(options.host, str=stdinstring)
+        UploadEntityImport(options.host, str=stdinstring, force=options.force)
     print("Successfully Imported!")
 
 if __name__ == '__main__':
