@@ -80,10 +80,10 @@ def main():
     for line in fi:
         if line.count(",") < 2:
             continue
-        type = line.split(",")[0].strip()
-        name = line.split(",")[1].strip()
+        type = line.split(",")[0].strip().replace("'","").replace('"',"")
+        name = line.split(",")[1].strip().replace("'","").replace('"',"")
         members = []
-        for member in line.split(",")[2:]:
+        for member in line.replace("'","").replace('"',"").split(",")[2:]:
             members.append(member.strip())
         # create a new object and stuff it in the top container
         if type.lower() == 'application':
