@@ -72,12 +72,15 @@ def GetEntityId(ipaddr, entity):
         if r.status_code == 200 and r.json()['status'] == "OK":
             for e in r.json()['result']['data']:
                 if e['DisplayLabel'] == entity:
-                    entitylist.append(e['Id'])
+                    entitylist.append((e['Name'], e['Id'], e['Type']))
 
     return entitylist
 
-def GetTopology(ipaddr, entityid):
-    payload = {"appId":"-1","hostFilter":{"type":"HostPort","entityIds":[entityid]},"storageFilter":{"type":"StoragePort"},"hostEdgeFilter":{"type":"LogicalSwitch"},"storageEdgeFilter":{"type":"LogicalSwitch"}}
+def GetTopology(ipaddr, entityid, entitytype):
+    if entitytype.startswith("Storage"):
+        payload = {"appId":"-1","hostFilter":{"type":"HostPort"},"storageFilter":{"type":"StoragePort","entityIds":[entityid]},"hostEdgeFilter":{"type":"LogicalSwitch"},"storageEdgeFilter":{"type":"LogicalSwitch"}}
+    else:
+        payload = {"appId":"-1","hostFilter":{"type":"HostPort","entityIds":[entityid]},"storageFilter":{"type":"StoragePort"},"hostEdgeFilter":{"type":"LogicalSwitch"},"storageEdgeFilter":{"type":"LogicalSwitch"}}
     # undocumented and unsupported apis, subject to change in every release
     r = s.put('https://{0}/api/topo/filter4/graph'.format(ipaddr), data=json.dumps(payload), headers=jsonheaders, verify=False)
     hbas = []
@@ -86,9 +89,27 @@ def GetTopology(ipaddr, entityid):
     if r.status_code == 200 and r.json()['status'] == "OK":
         for node in r.json()['result']['nodes']:
             if 'DeviceType' in r.json()['result']['nodes'][node] and r.json()['result']['nodes'][node]['DeviceType'] == 'SERVER':
-                hbas.append(r.json()['result']['nodes'][node]['DisplayLabel'])
+                if 'IsBlob' in r.json()['result']['nodes'][node] and r.json()['result']['nodes'][node]['IsBlob'] == True:
+                    childlist = []
+                    for child in r.json()['result']['nodes'][node]['ChildIds']:
+                        childlist.append(child)
+                    r2 = s.post('https://{0}/api/entitymgmt/entities/idlist'.format(ipaddr), data=json.dumps(childlist), headers=jsonheaders, verify=False)
+                    if r2.status_code == 200 and r2.json()['status'] == "OK":
+                        for item in r2.json()['result']['data']:
+                            hbas.append(item['DisplayLabel'])
+                else:
+                    hbas.append(r.json()['result']['nodes'][node]['DisplayLabel'])
             elif 'DeviceType' in r.json()['result']['nodes'][node] and r.json()['result']['nodes'][node]['DeviceType'] == 'STORAGE':
-                storageports.append(r.json()['result']['nodes'][node]['DisplayLabel'])
+                if 'IsBlob' in r.json()['result']['nodes'][node] and r.json()['result']['nodes'][node]['IsBlob'] == True:
+                    childlist = []
+                    for child in r.json()['result']['nodes'][node]['ChildIds']:
+                        childlist.append(child)
+                    r2 = s.post('https://{0}/api/entitymgmt/entities/idlist'.format(ipaddr), data=json.dumps(childlist), headers=jsonheaders, verify=False)
+                    if r2.status_code == 200 and r2.json()['status'] == "OK":
+                        for item in r2.json()['result']['data']:
+                            storageports.append(item['DisplayLabel'])
+                else:
+                    storageports.append(r.json()['result']['nodes'][node]['DisplayLabel'])
             else:
                 switches.append(r.json()['result']['nodes'][node]['DisplayLabel'])
 
@@ -105,7 +126,8 @@ def main():
 
     entities = GetEntityId(options.host, options.entity)
     for entityid in entities:
-        topo = GetTopology(options.host, entityid)
+        topo = GetTopology(options.host, entityid[1], entityid[2])
+        print("\n\nTopology for: {0}\n".format(entityid[0]))
         print("Host Ports: {0}".format(', '.join(topo[0])))
         print("Switches: {0}".format(', '.join(topo[1])))
         print("Storage Ports: {0}".format(', '.join(topo[2])))
