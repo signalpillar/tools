@@ -85,6 +85,8 @@ def EntityExport(ipaddr, entity):
                             lun = i['lun'] if i['lun'] != -1 else 'All' 
                             itls.append((init, targ, lun))
                     entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['BeginTime'], e['Id'], itls))
+                elif e['Type'] == 'HostPort' or e['Type'] == 'StoragePort':
+                    entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['WWN'], e['BeginTime'], e['Id']))
                 else:
                     entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['BeginTime'], e['Id']))
 
@@ -99,8 +101,12 @@ def EntityTypeExport(ipaddr, entitytype):
     if r.status_code == 200 and r.json()['status'] == "OK":
         entitylist = []
         for entity in r.json()['result']['data']:
-            entitylist.append((entity['DisplayLabel'], entity['Type'], entity['Tags'], entity['Description'], entity['BeginTime'], entity['Id']))
+            if entity['Type'] == "HostPort" or entity['Type'] == "StoragePort":
+                entitylist.append((entity['DisplayLabel'], entity['Type'], entity['Tags'], entity['Description'], entity['WWN'], entity['BeginTime'], entity['Id']))
+            else:
+                entitylist.append((entity['DisplayLabel'], entity['Type'], entity['Tags'], entity['Description'], entity['BeginTime'], entity['Id']))
         return entitylist
+
     else:
         return []
     #except:
