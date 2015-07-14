@@ -1,58 +1,55 @@
-# tools
-Unsupported tools for interfacing with VirtualWisdom.
+# Tools
+Unsupported tools for interfacing with VirtualWisdom. Tools are a set of scripts to import and export data from the VW Appliance.
 
-<h2>EntityImport.py</h2>
 
-validates and imports entity import file to VW
+# Installation
 
-Usage:  
+Run the following command to get scripts installed:
 
-  python3 EntityImport.py -v &lt;VW Appliance IP&gt; -u &lt;Username&gt; {-p &lt;Password&gt;|-z &lt;Password File&gt;} {-f &lt;Entity Import File&gt;|-i}
+    pip install -e git+https://github.com/Virtual-Instruments/tools.git\#egg=vw-tools-py
 
-<h2>CSVNicknameToJSON.py</h2>
+# Supported use cases.
 
-converts CSV WWN,nickname to entity import file
-
-Usage:
-
-  python3 CSVNicknameToJSON.py [-i &lt;Input File&gt;] [-o &lt;Output File&gt;]
-
-<h2>CSVRelationsToJSON.py</h2>
-
-converts CSV EntityType,EntityName,Members to entity import file
+### Validate and import an entity import file to a VW.
 
 Usage:
 
-  python3 CSVRelationsToJSON.py [-i &lt;Input File&gt;] [-o &lt;Output File&gt;]
+    vw_import_entities -v <VW Appliance IP> -u <Username> {-p <Password>|-z <Password File>} {-f <Entity Import File>|-i}
 
-<h2>ExportEntities.py</h2>
-
-exports entity details to csv, by entity type or search by name
+### Convert CSV WWN, nickname to an entity import file.
 
 Usage:
 
-  python3 ExportEntities.py -v &lt;VW Appliance IP&gt; -u &lt;Username&gt; {-p &lt;Password&gt;|-z &lt;Password File&gt;} {-e &lt;Entity Search String&gt;|-t &lt;Entity Type&gt;} [-o &lt;Output File&gt;] [--properties] [--exactonly]
+    vw_csv_nickname_to_json [-i <Input File>] [-o <Output File>]
 
-<h2>ShowTopology.py</h2>
-
-csv export of topology for a given entity name / entity id
+### Convert CSV EntityType, EntityName, Members to an entity import file.
 
 Usage:
 
-  python3 ShowTopology.py -v &lt;VW Appliance IP&gt; -u &lt;Username&gt; {-p &lt;Password&gt;|-z &lt;Password File&gt;} -e &lt;Entity Search String&gt; [-o &lt;Output File&gt;]
+    vw_csv_relations_to_json [-i <Input File>] [-o <Output File>]
 
-<h2>ExpandApplicationToInitiatorTarget.py</h2>
-
-creates an application defined as Initiator:Target from an application defined as a set of hosts
+### Export entity details to CSV, by entity type or search by name.
 
 Usage:
 
-  python3 ExpandApplicationToInitiatorTarget.py -v &lt;VW Appliance IP&gt; -u &lt;Username&gt; {-p &lt;Password&gt;|-z &lt;Password File&gt;} {-a &lt;Application&gt;|-e &lt;Host&gt;[,&lt;Host&gt;][,&lt;Host&gt;]} [-o &lt;Output File&gt;]
+    vw_export_entities -v <VW Appliance IP> -u <Username> {-p <Password>|-z <Password File>} {-e <Entity Search String>|-t <Entity Type>} [-o <Output File>] [--properties] [--exactonly]
+
+### CSV export of topology for a given entity name / entity id.
+
+Usage:
+
+    vw_show_topology -v <VW Appliance IP> -u <Username> {-p <Password>|-z <Password File>} -e <Entity Search String> [-o <Output File>]
+
+### Create an application defined as Initiator:Target from an application defined as a set of hosts.
+
+Usage:
+
+    python3 ExpandApplicationToInitiatorTarget.py -v <VW Appliance IP> -u <Username> {-p <Password>|-z <Password File>} {-a <Application>|-e <Host>[,<Host>][,<Host>]} [-o <Output File>]
 
 | Notation | Description |
 | -------- | ----------- |
 | Text without brackets or braces | Items you must type as shown |
-| &lt;Text inside angle brackets&gt; | Placeholder for which you must supply a value |
+| <Text inside angle brackets> | Placeholder for which you must supply a value |
 | [Text inside square brackets] | Optional items |
 | {Text inside braces} | Set of required items; choose one |
 | Vertical bar (&#124;) | Separator for mutually exclusive items; choose one |
