@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+"""
+Export entities by type or name.
+
+Usage:
+
+    vw_export_entities -v <VW Appliance IP> -u <Username> -p <Password> -e <Entity Name>
+
+    vw_export_entities -v <VW Appliance IP> -u <Username> -z <PasswordFile> -t <Entity Type>
+
+    echo 'admin' > pwfile
+    chmod 600 pwfile
+    vw_export_entities -v 10.20.30.40 -u Administrator -z pwfile -t Application
+"""
 
 __author__ = 'nick.york'
 __license__ = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -6,17 +19,17 @@ __copyright__ = 'Copyright (c) 2015 Virtual Instruments Corporation. All rights 
 __date__ = '2015-02-22'
 __version__ = '1.0'
 
-# requires python requests module by Kenneth Reitz
-# http://docs.python-requests.org/en/latest/
-# git clone git://github.com/kennethreitz/requests.git
-# pip3 install requests
-import requests
-import json
-import sys, os, optparse
+# std
+import optparse
+import os
+import traceback
 
-jsonheaders = {'content-type': 'application/json'}
+# 3rd-party
+import requests
+
 requests.packages.urllib3.disable_warnings()
 s = requests.session()
+
 
 def ParseCmdLineParameters():
     opts = optparse.OptionParser(description='Upload a JSON Entity Import File to VirtualWisdom.')
@@ -31,11 +44,11 @@ def ParseCmdLineParameters():
     opts.add_option("-x", "--exactonly", action="store_true", dest="exactonly", default=False)
     opt, argv = opts.parse_args()
 
-    if opt.host == None or opt.username == None or (opt.password == None and opt.passwordfile == None) or (opt.entity == None and opt.entitytype == None):
+    if not (opt.host and opt.username and (opt.password or opt.passwordfile) and (opt.entity or opt.entitytype)):
         PrintHelpAndExit("You must specify the VirtualWisdom host, username, password or password file and entity or entity type.")
         exit()
 
-    if opt.passwordfile != None:
+    if opt.passwordfile is not None:
         if not os.path.exists(opt.passwordfile):
             PrintHelpAndExit("Specified password file does not exist.")
 
@@ -45,8 +58,9 @@ def ParseCmdLineParameters():
 def PrintHelpAndExit(errormessage=""):
     if (errormessage != ""):
         print("\n\n" + errormessage)
-    print("\n\nUsage:\n\tEntityExport -v <VW Appliance IP> -u <Username> -p <Password> -e <Entity Name>\n\n\tEntityImport -v <VW Appliance IP> -u <Username> -z <PasswordFile> -t <Entity Type>>\n\n\t\techo 'admin' > pwfile\n\t\tchmod 600 pwfile\n\t\tpython3 EntityExport.py -v 10.20.30.40 -u Administrator -z pwfile -t Application\n\n")
+    print(__doc__)
     exit()
+
 
 # logs into VirtualWisdom using the provided credentials
 # on the global session
@@ -64,14 +78,16 @@ def VirtualWisdomLogin(ipaddr, login, password):
                 PrintHelpAndExit("Logged into VirtualWisdom but session check was unsuccessful.")
         else:
             PrintHelpAndExit("Unable to connect to VirtualWisdom with provided information.")
-    except:
+    except Exception:
+        traceback.print_exc()
         PrintHelpAndExit("Exception caught in the VirtualWisdom login process.")
 
+
 def EntityExport(ipaddr, entity):
-    #try:
     # undocumented and unsupported apis, subject to change in every release
     entitylist = []
-    for entitytype in ('Application', 'Host', 'HBA', 'HostPort', 'ESXCluster', 'ESXHost', 'VirtualMachine', 'StorageArray', 'StorageController', 'IOModule', 'StoragePort'):
+    for entitytype in ('Application', 'Host', 'HBA', 'HostPort', 'ESXCluster', 'ESXHost', 'VirtualMachine',
+                       'StorageArray', 'StorageController', 'IOModule', 'StoragePort'):
         r = s.get('https://{0}/api/entitymgmt/entities?filter={1}&filterKeys=DisplayLabel%2CTags&filterValues={1}&type={2}&page=1&start=0&limit=500000'.format(ipaddr, entity, entitytype), verify=False)
         if r.status_code == 200 and r.json()['status'] == "OK":
             for e in r.json()['result']['data']:
@@ -80,9 +96,9 @@ def EntityExport(ipaddr, entity):
                     r2 = s.get('https://{0}/api/entitymgmt/app/{1}/itls?filterKeys=initiatorLabel&filterKeys=targetLabel&page=1&start=0&limit=500000'.format(ipaddr, e['Id']), verify=False)
                     if r2.status_code == 200 and r2.json()['status'] == "OK":
                         for i in r2.json()['result']['data']:
-                            init = i['initiatorLabel'] if i['initiatorLabel'] != '' else 'All' 
+                            init = i['initiatorLabel'] if i['initiatorLabel'] != '' else 'All'
                             targ = i['targetLabel'] if i['targetLabel'] != '' else 'All'
-                            lun = i['lun'] if i['lun'] != -1 else 'All' 
+                            lun = i['lun'] if i['lun'] != -1 else 'All'
                             itls.append((init, targ, lun))
                     entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['BeginTime'], e['Id'], itls))
                 elif e['Type'] == 'HostPort' or e['Type'] == 'StoragePort':
@@ -91,11 +107,9 @@ def EntityExport(ipaddr, entity):
                     entitylist.append((e['DisplayLabel'], e['Type'], e['Tags'], e['Description'], e['BeginTime'], e['Id']))
 
     return entitylist
-    #except:
-    #    PrintHelpAndExit("Exception caught during Entity Import.")
+
 
 def EntityTypeExport(ipaddr, entitytype):
-    #try:
     # undocumented and unsupported apis, subject to change in every release
     r = s.get('https://{0}/api/entitymgmt/entities?filter=&filterKeys=DisplayLabel%2CTags&filterValues=&type={1}&page=1&start=0&limit=500000'.format(ipaddr, entitytype), verify=False)
     if r.status_code == 200 and r.json()['status'] == "OK":
@@ -109,30 +123,30 @@ def EntityTypeExport(ipaddr, entitytype):
 
     else:
         return []
-    #except:
-    #    PrintHelpAndExit("Exception caught during Entity Import.")
+
 
 def GetProperties(ipaddr, entityid):
     r = s.get('https://{0}/api/entitymgmt/entity/properties?ids={1}&withArchived=false'.format(ipaddr, entityid), verify=False)
     if r.status_code == 200 and r.json()['status'] == "OK":
         return r.json()['result']
 
+
 def main():
     options = ParseCmdLineParameters()
 
     # if the user specified a password use it, otherwise read from the provided password file
-    if options.password != None:
+    if options.password is not None:
         VirtualWisdomLogin(options.host, options.username, options.password)
     else:
-        VirtualWisdomLogin(options.host, options.username, open(options.passwordfile,'r').readline().strip())
+        VirtualWisdomLogin(options.host, options.username, open(options.passwordfile, 'r').readline().strip())
 
     # if the user specified an entity file, use it otherwise read from standard input
-    if options.entity != None:
+    if options.entity is not None:
         entities = EntityExport(options.host, options.entity)
     else:
         entities = EntityTypeExport(options.host, options.entitytype)
-    
-    if options.entity != None:
+
+    if options.entity is not None:
         if options.exactonly:
             print("\nExact Matches:")
             for e in entities:
