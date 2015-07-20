@@ -23,12 +23,13 @@ setup(
             'vw_csv_relations_to_json = vw.CSVRelationsToJSON:main',
             'vw_show_topology         = vw.ShowTopology:main',
             'vw_expand_app_to_initiator_target = vw.ExpandApplicationToInitiatorTarget:main',
+            'vw_export_data           = vw.export_data:main',
         ],
     },
     install_requires=[
         "requests>=2.7.0",
     ],
-    classifiers = [
+    classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
         "Environment :: Console",
