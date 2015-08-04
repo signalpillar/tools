@@ -4,6 +4,9 @@ import argparse
 # 3rd-party
 import requests
 
+# FIXME: ensure that disabled per client if configured - not globally.
+requests.packages.urllib3.disable_warnings()
+
 
 class BaseError(Exception):
     "Base VW application error."
@@ -55,24 +58,36 @@ class Client(object):
     def parse_api_response(cls, document):
         status = document.get('status')
         if status == 'OK':
-            return document.get('result')
-        error = document.get('error')
-        raise OperationFailure(error.get('code'), error.get('message'))
+            result = document.get('result')
+            if 'totalCount' in result:
+                result = result.get('data')
+            return result
+        raise OperationFailure.from_error_document(document.get('error'))
 
     def get(self, entrypoint, *args, **kwargs):
         """
+        :type entrypoint: str
         :raise :class:`OperationFailure`: Failed to get resource.
+        :raise :class:`ClientError`: Failed to call GET method.
         """
         url = "{}/{}".format(self._api_url, entrypoint)
         response = self._session.get(url, *args, **kwargs)
         if response.status_code == 200:
-            json_ = response.json()
-            status = json_.get('status')
-            if status == 'OK':
-                return json_.get('result')
-            elif status == 'Failure':
-                error = json_.get('error')
-                raise OperationFailure(error.get('code'), error.get('message'))
+            return self.parse_api_response(response.json())
+        raise ClientError(response.status_code, "Failed to call GET method: {}".format(response.content))
+
+    def put(self, entrypoint, expected_status_code, *args, **kwargs):
+        """
+        :type entrypoint: str
+        :type expected_status_code: int
+        :raise :class:`OperationFailure`: Failed to get resource.
+        :raise :class:`ClientError`: Failed to call GET method.
+        """
+        url = "{}/{}".format(self._api_url, entrypoint)
+        response = self._session.put(url, *args, **kwargs)
+        if response.status_code == expected_status_code:
+            return self.parse_api_response(response.json())
+        raise ClientError(response.status_code, "Failed to call GET method: {}".format(response.content))
 
     def __getattr__(self, name):
         return getattr(self._session, name)
@@ -88,9 +103,22 @@ class ApiError(BaseError):
 
     def __repr__(self):
         return "{class_}({code!r}, {message!r}".format(
-            self.__class__.__name,
+            self.__class__.__name__,
             self.code,
             self.message)
+
+    @classmethod
+    def from_error_document(cls, document):
+        """
+        {'code': 'EM.5011', 'causes': [{'code': '', 'causes': [], 'data': '', 'message': 'Node 1406658900 was not found in the database'}], 'data': '', 'message': 'Failed to get properties'}
+        """
+        code = document.get('code')
+        message = document.get('message')
+        causes = '; '.join(
+            cause_dict.get('message')
+            for cause_dict in document.get('causes')
+        )
+        return cls(code, message="{}; {}".format(message, causes))
 
 
 class OperationFailure(ApiError):

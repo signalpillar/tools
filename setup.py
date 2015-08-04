@@ -28,6 +28,8 @@ setup(
     },
     install_requires=[
         "requests>=2.7.0",
+        # parse naturally described dates
+        "parsedatetime==1.4",
     ],
     classifiers=[
         "Programming Language :: Python",
