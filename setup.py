@@ -28,7 +28,7 @@ setup(
     install_requires=[
         "requests>=2.7.0",
     ],
-    classifiers = [
+    classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
         "Environment :: Console",

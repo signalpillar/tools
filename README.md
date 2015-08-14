@@ -8,6 +8,10 @@ Run the following command to get scripts installed:
 
     pip install -e git+https://github.com/Virtual-Instruments/tools.git\#egg=vw-tools-py
 
+# Run tests
+
+    tox 
+
 # Supported use cases.
 
 ### Validate and import an entity import file to a VW.
@@ -44,7 +48,7 @@ Usage:
 
 Usage:
 
-    python3 ExpandApplicationToInitiatorTarget.py -v <VW Appliance IP> -u <Username> {-p <Password>|-z <Password File>} {-a <Application>|-e <Host>[,<Host>][,<Host>]} [-o <Output File>]
+    vw_expand_app_to_initiator_target -v <VW Appliance IP> -u <Username> {-p <Password>|-z <Password File>} {-a <Application>|-e <Host>[,<Host>][,<Host>]} [-o <Output File>]
 
 | Notation | Description |
 | -------- | ----------- |
